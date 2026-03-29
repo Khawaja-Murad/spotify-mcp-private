@@ -9,14 +9,14 @@ import spotipy
 import uvicorn
 from dotenv import load_dotenv
 from mcp.server import Server
-from mcp.server.sse import SseServerTransport
+from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 from mcp.types import TextContent, Tool
 from spotipy.oauth2 import SpotifyOAuth
 from spotipy.cache_handler import MemoryCacheHandler
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import JSONResponse
-from starlette.routing import Route
+from starlette.routing import Route, Mount
 
 load_dotenv()
 
@@ -56,7 +56,11 @@ sp = spotipy.Spotify(auth_manager=auth_manager)
 # --- MCP Server ---
 
 server = Server("spotify-mcp")
-sse = SseServerTransport("/messages/")
+session_manager = StreamableHTTPSessionManager(
+    app=server,
+    stateless=True,
+    json_response=True,
+)
 
 
 @server.list_tools()
@@ -554,25 +558,29 @@ def _analyze_taste_profile(args: dict) -> dict:
 # --- HTTP routes ---
 
 
-async def handle_sse(request: Request):
-    async with sse.connect_sse(request.scope, request.receive, request._send) as streams:
-        await server.run(streams[0], streams[1], server.create_initialization_options())
-
-
-async def handle_messages(request: Request):
-    await sse.handle_post_message(request.scope, request.receive, request._send)
+async def handle_mcp(request: Request):
+    await session_manager.handle_request(request.scope, request.receive, request._send)
 
 
 async def healthcheck(request: Request):
     return JSONResponse({"status": "ok"})
 
 
+async def on_startup():
+    await session_manager.__aenter__()
+
+
+async def on_shutdown():
+    await session_manager.__aexit__(None, None, None)
+
+
 app = Starlette(
     routes=[
-        Route("/sse", endpoint=handle_sse),
-        Route("/messages/", endpoint=handle_messages, methods=["POST"]),
         Route("/health", endpoint=healthcheck),
+        Mount("/mcp", app=session_manager.handle_request),
     ],
+    on_startup=[on_startup],
+    on_shutdown=[on_shutdown],
 )
 
 if __name__ == "__main__":
