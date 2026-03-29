@@ -1,0 +1,8 @@
+.env
+.spotify_auth_cache
+*.cache
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.DS_Store
