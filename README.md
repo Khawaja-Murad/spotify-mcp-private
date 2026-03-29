@@ -23,7 +23,7 @@ A Model Context Protocol (MCP) server that connects Claude.ai to your Spotify ac
 
 1. Go to [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard)
 2. Create a new app
-3. Set the redirect URI to `http://127.0.0.1:8888/callback` (use `127.0.0.1`, not `localhost` \u2014 Spotify blocks `localhost` on app creation)
+3. Set the redirect URI to `http://127.0.0.1:8888/callback` (use `127.0.0.1`, not `localhost` — Spotify blocks `localhost` on app creation)
 4. Copy your **Client ID** and **Client Secret**
 
 ### 2. Configure Environment
@@ -41,7 +41,7 @@ pip install -r requirements.txt
 python auth.py
 ```
 
-This opens Spotify's authorization page. After you approve, paste the redirect URL back into the terminal. The script prints your refresh token \u2014 add it to `.env` as `SPOTIFY_REFRESH_TOKEN`.
+This opens Spotify's authorization page. After you approve, paste the redirect URL back into the terminal. The script prints your refresh token — add it to `.env` as `SPOTIFY_REFRESH_TOKEN`.
 
 Once the refresh token is saved, you never need to run `auth.py` again. The server auto-refreshes the token on every start.
 
@@ -51,25 +51,26 @@ Once the refresh token is saved, you never need to run `auth.py` again. The serv
 python server.py
 ```
 
-The server starts at `http://localhost:8000/sse`.
+The server starts at `http://localhost:8000/mcp`.
 
 ### 5. Connect to Claude.ai
 
-1. Go to Claude.ai \u2192 **Settings** \u2192 **Connectors**
+1. Go to Claude.ai → **Settings** → **Connectors**
 2. Click **Add Custom Connector**
-3. Paste the SSE URL: `http://localhost:8000/sse` (or your deployed HTTPS URL)
+3. Paste the URL: `http://localhost:8000/mcp` (or your deployed HTTPS URL)
 
-### 6. Deploy to Railway (Optional)
+### 6. Deploy to Vercel (Recommended)
 
 1. Push this repo to GitHub
-2. Connect the repo in [Railway](https://railway.app)
-3. Add these environment variables in the Railway dashboard:
+2. Import the repo at [vercel.com/new](https://vercel.com/new)
+3. Add these environment variables in the Vercel dashboard:
    - `SPOTIFY_CLIENT_ID`
    - `SPOTIFY_CLIENT_SECRET`
    - `SPOTIFY_REFRESH_TOKEN`
-   - `PORT` (Railway sets this automatically)
-4. Deploy \u2014 Railway gives you a public HTTPS URL
-5. Use that URL + `/sse` as the connector URL in Claude.ai
+4. Deploy — Vercel gives you a public HTTPS URL
+5. Use that URL + `/mcp` as the connector URL in Claude.ai
+
+Free tier, auto-scales, no cost when idle.
 
 ## Example Usage
 
@@ -79,4 +80,6 @@ Claude will call `analyze_taste_profile` to understand your preferences, then us
 
 ## How It Works
 
-The server uses Spotify's OAuth 2.0 with a **refresh token** strategy. You authenticate once with `auth.py` to get a long-lived refresh token. The server pre-seeds spotipy's `MemoryCacheHandler` with this token and `expires_at=0`, which forces an immediate token refresh on startup \u2014 no browser, no interactive prompt. The token auto-refreshes on every expiry.
+The server uses Spotify's OAuth 2.0 with a **refresh token** strategy. You authenticate once with `auth.py` to get a long-lived refresh token. The server pre-seeds spotipy's `MemoryCacheHandler` with this token and `expires_at=0`, which forces an immediate token refresh on startup — no browser, no interactive prompt. The token auto-refreshes on every expiry.
+
+The MCP transport uses **Streamable HTTP** (not SSE), making it compatible with serverless platforms like Vercel.

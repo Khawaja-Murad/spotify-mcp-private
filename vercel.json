@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "builds": [
+    { "src": "server.py", "use": "@vercel/python" }
+  ],
+  "routes": [
+    { "src": "/mcp(.*)", "dest": "server.py" },
+    { "src": "/health", "dest": "server.py" }
+  ],
+  "functions": {
+    "server.py": {
+      "maxDuration": 60
+    }
+  }
+}
